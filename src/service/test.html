@@ -1,0 +1,123 @@
+<script src="https://unpkg.com/axios/dist/axios.min.js"></script>
+
+
+<script>
+    axios.interceptors.request.use(
+        config => {
+            // 获取token
+            const token = localStorage.getItem('token')
+            // 设置参数格式
+            if (!config.headers['Content-Type']) {
+                config.headers = {
+                    'Content-Type': 'application/json',
+                    'Authorization': ""
+                }
+            }
+            // 添加token到headers
+            if (token) {
+                config.headers.Authorization = 'Bearer ' + token
+            }
+            // 鉴权参数设置
+            if (config.method === 'get') {
+                // get请求下 参数在params中，其他请求在data中
+                config.params = config.params || {}
+                const json = JSON.parse(JSON.stringify(config.params))
+                // 一些参数处理
+            } else {
+                config.data = config.data || {}
+                // 一些参数处理
+            }
+            return config
+        },
+        err => {
+            return Promise.reject(err)
+        }
+    )
+
+    // http response 拦截器
+    axios.interceptors.response.use(
+        response => {
+            // 一些统一code的返回处理
+            if (response.data.code === 501) {
+                // 登录验证
+                // 做了个示例跳转项目中登录，并记录下相对路径
+                router.push({
+                    name: 'login', // 从哪个页面跳转
+                    query: {
+                        retUrl: window.location.href.split('#')[1] || '',
+                        is_new_user_url: 1
+                    }
+                })
+            }
+            return response
+        },
+        error => {
+            return Promise.reject(error)
+        }
+    )
+    const _baseUrl = 'http://localhost:9091/'
+
+    function post(url, data = {}) {
+        return new Promise((resolve, reject) => {
+            axios.post(url, data)
+                .then(response => {
+                    if (response.status === 200) {
+                        resolve(response.data)
+                    } else {
+                        Toast(response.status)
+                    }
+                }, err => {
+                    reject(err)
+                    let message = '请求失败！请检查网络'
+                    if (err.response) message = err.response.data.message
+                    Toast(message)
+                })
+        })
+    }
+    const userSecret = `${_baseUrl}api/user/login`
+    const userTest = `${_baseUrl}api/user/add`
+    const AddUser = () => {
+        let url = `${userTest}`
+        let token = localStorage.getItem('token')
+        let data = {
+            userId: "123",
+            nickName: "myson",
+            mobile: "123456",
+            password: "123456",
+            isDelete: false,
+            isLocked: false
+        }
+        post(url, data).then(res => {
+            console.log(res)
+            if (res["entity"]["code"] === 200) {
+                let entity = res["entity"]
+
+                console.log(entity['data']) // 得到Token
+            } else {
+                console.log("00000000")
+            }
+        })
+    }
+
+    const GetUserSecret = (user_id) => {
+        let url = `${userSecret}`
+        let data = {
+            UserId: user_id,
+            password: '123'
+
+        }
+        post(url, data).then(res => {
+            if (res["entity"]["code"] === 200) {
+                let entity = res["entity"]
+                localStorage.clear()
+                localStorage.setItem("info", 1)
+                localStorage.setItem('flag', 1)
+                localStorage.setItem('token', entity['data']['token'])
+
+                console.log(entity['data']['token']) // 得到Token
+            } else {
+                console.log("00000000")
+            }
+        })
+    }
+</script>
